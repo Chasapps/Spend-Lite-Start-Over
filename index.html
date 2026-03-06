@@ -43,8 +43,16 @@
       <div class="app-controls">
         <!-- File input for uploading bank CSV files -->
         <!-- accept=".csv" restricts file picker to CSV files only -->
-        <input type="file" id="csvFile" accept=".csv">
-        <input type="file" id="pdfFile" accept="application/pdf">
+    <input type="file" id="csvFile" accept=".csv">
+
+<!-- Existing direct PDF import -->
+<input type="file" id="pdfFile" accept="application/pdf">
+
+<!-- NEW: PDF → CSV converter -->
+<input type="file" id="pdfConvertInput" accept="application/pdf" hidden>
+<button id="convertPdfBtn" class="secondary">
+  Convert Statement PDF → CSV
+</button>
 
 
         <!-- Month filter dropdown and clear button -->
@@ -146,11 +154,17 @@
   <footer class="app-footer">Made with ♥ for bright, jolly spreadsheets</footer>
 
   <!-- External library: PapaParse for CSV parsing -->
-  <!-- This library converts CSV text into JavaScript arrays/objects -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <!-- Main application JavaScript -->
-  <script src="script.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<!-- PDF.js Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+</script>
+
+<!-- Your main script -->
+<script src="script.js"></script>
   
   <!-- Category picker modal JavaScript -->
   <script src="catpicker-modal.js"></script>
