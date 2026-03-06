@@ -1096,7 +1096,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${year}-${months[mon]}-${day.padStart(2,'0')}`;
   }
 
-  function parseWestpacPdfText(text) {
+function extractWestpacStatement(text) {
+
+  const months = {
+    Jan:"01",Feb:"02",Mar:"03",Apr:"04",
+    May:"05",Jun:"06",Jul:"07",Aug:"08",
+    Sep:"09",Oct:"10",Nov:"11",Dec:"12"
+  };
+
   const lines = text
     .split(/\n+/)
     .map(l => l.trim())
@@ -1104,49 +1111,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const txns = [];
 
-  let curDate = null;
-  let curDesc = [];
+  for (let i = 0; i < lines.length - 2; i++) {
 
-  for (const line of lines) {
-    // 1️⃣ Date line (standalone)
-    const dateMatch = line.match(/^(\d{1,2}\s+[A-Za-z]{3}\s+\d{4})$/);
-    if (dateMatch) {
-      curDate = normalisePdfDate(dateMatch[1]);
-      curDesc = [];
+    // detect date line
+    const dateMatch = lines[i].match(
+      /^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{2})$/
+    );
+
+    if (!dateMatch) continue;
+
+    // detect amount line
+    const amtMatch = lines[i+1].match(/^([\d,]+\.\d{2})(\s*-)?$/);
+    if (!amtMatch) continue;
+
+    const day = dateMatch[1].padStart(2,"0");
+    const month = months[dateMatch[2]];
+    const year = "20" + dateMatch[3];
+
+    let amount = parseAmount(amtMatch[1]);
+    if (amtMatch[2]) amount = -amount;
+
+    // merchant line
+    let desc = lines[i+2] || "";
+
+    // clean merchant text
+    desc = desc
+      .replace(/\bAUS\b/gi,"")
+      .replace(/\bPYPL\b/gi,"")
+      .replace(/\bVISA\b/gi,"")
+      .replace(/\*/g,"")
+      .replace(/\s+/g," ")
+      .trim();
+
+    // ignore statement junk
+    if (
+      amount > 2000 ||
+      /payment|amount|date|balance|closing|opening|years|months/i.test(desc)
+    ) {
       continue;
     }
 
-    // 2️⃣ Amount line (standalone)
-    const amtMatch = line.match(/^-?\$?\d+\.\d{2}$/);
-    if (amtMatch && curDate) {
-      let amount = Math.abs(parseAmount(line));
+    if (!desc) desc = "Imported Transaction";
 
-     const description = curDesc.join(' ').trim();
+    txns.push({
+      date:`${year}-${month}-${day}`,
+      amount:Math.abs(amount),
+      description:desc
+    });
 
-// Skip repayments / payments
-  if (/^PAYMENT[- ]BPAY/i.test(description)) {
-    curDate = null;
-    curDesc = [];
-    continue;
-  }
-
-  txns.push({
-    date: curDate,
-    description,
-    amount
-  });
-
-      curDate = null;
-      curDesc = [];
-      continue;
-    }
-
-    // 3️⃣ Description lines (between date and amount)
-    if (curDate) {
-      // Skip table headers / junk
-      if (/^(withdrawal|deposit|date|description)$/i.test(line)) continue;
-      curDesc.push(line);
-    }
+    i += 2; // skip amount + merchant lines
   }
 
   return txns;
